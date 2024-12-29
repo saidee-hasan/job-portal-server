@@ -8,8 +8,28 @@ const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 
 app.use(cookieParser())
-app.use(cors());
+app.use(cors( {
+  origin: ['http://localhost:5173','https://rooms-booking.netlify.app'],
+  credentials: true // Allow credentials (cookies, authorization headers, etc.)
+}));
 require("dotenv").config();
+const verifyToken = (req,res,next)=>{
+  const token = req?.cookies?.token;
+  if(!token){
+   return res.status(401).send({massage:'Unauthorized access'})
+  }
+ // verify token
+ jwt.verify(token,process.env.ACCESS_TOKEN_SECRET,(err,decoded)=>{
+   if(err){
+     return res.status(401).send({massage:'Unauthorized access'})
+    }
+    req.user= decoded
+    next()
+ })
+ 
+ }
+ 
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.cnyhf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -30,6 +50,7 @@ async function run() {
 
     app.post("/jobsApplication", async (req, res) => {
       const receivedData = req.body; // Access the data sent in the request body
+     
       const result = await jobsApplicationCollection.insertOne(receivedData);
       res.send(result);
       console.log("Received data:", receivedData);
@@ -45,6 +66,16 @@ async function run() {
       })
       .send({success:true})
     })
+    app.post('/logout',async(req,res)=>{
+      res.cookie('token',{
+        httOnly : true,
+        secure:process.env.NODE_ENV === 'production',
+        sameSite:process.env.NODE_ENV === 'production' ? 'none': "strict",
+    
+      })
+      .send({success:true})
+    })
+    
 
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
@@ -73,10 +104,13 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/jobs-application", async (req, res) => {
+    app.get("/jobs-application",verifyToken, async (req, res) => {
       const email = req.query.email;
       const query = { applicant_email: email };
-
+      if(req.user.email !== email){
+        return res.status(403).send({ message: 'Forbidden access' });
+      }
+ 
       const result = await jobsApplicationCollection.find(query).toArray();
 
       for (const application of result) {
