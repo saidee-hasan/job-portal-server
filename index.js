@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId, serialize } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 app.use(express.json());
@@ -80,13 +80,24 @@ async function run() {
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
       let query = {};
+      const {sort}=req.query;
+      const {search} = req.query;
+      console.log(search)
+let sortQuery = {}
+      if(sort == "true"){
+        sortQuery = {'salaryRange.min':-1}
+      }
+      if(search){
+        query.location={$regex:search,$options:'i'}
+      }
       if (email) {
         query = {
           hr_email: email,
         };
       }
+      console.log(query)
 
-      const cursor = jobsCollection.find(query);
+      const cursor = jobsCollection.find(query).sort(sortQuery);
       const result = await cursor.toArray();
 
       res.send(result);
