@@ -80,28 +80,70 @@ async function run() {
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
       let query = {};
-      const {sort}=req.query;
-      const {search} = req.query;
-      console.log(search)
-let sortQuery = {}
-      if(sort == "true"){
-        sortQuery = {'salaryRange.min':-1}
-      }
-      if(search){
-        query.location={$regex:search,$options:'i'}
-      }
-      if (email) {
+      const { sort } = req.query;
+      const { search } = req.query;
+      const min = req.query?.min;
+      const max = req.query?.max;
+    
+      console.log(max, min, search);
+    
+      // Apply salary range filtering if both min and max are provided
+      if (min && max) {
         query = {
-          hr_email: email,
+          ...query,
+          "salaryRange.min": { $gte: parseInt(min) }, // Filter for min salary
+          "salaryRange.max": { $lte: parseInt(max) }, // Filter for max salary
         };
+      } else {
+        // Apply only min salary if max is not provided
+        if (min) {
+          query = {
+            ...query,
+            "salaryRange.min": { $gte: parseInt(min) },
+          };
+        }
+        // Apply only max salary if min is not provided
+        if (max) {
+          query = {
+            ...query,
+            "salaryRange.max": { $lte: parseInt(max) },
+          };
+        }
       }
-      console.log(query)
-
-      const cursor = jobsCollection.find(query).sort(sortQuery);
-      const result = await cursor.toArray();
-
-      res.send(result);
+    
+      console.log("Query after salary filters:", query);
+    
+      // Sort by salary if "sort" is "true"
+      let sortQuery = {};
+      if (sort === "true") {
+        sortQuery = { "salaryRange.min": -1 }; // Sort by min salary in descending order
+      }
+    
+      // Apply location search if "search" is provided
+      if (search) {
+        query.location = { $regex: search, $options: "i" }; // Case-insensitive search
+      }
+    
+      // Apply filtering by email if "email" is provided
+      if (email) {
+        query.hr_email = email; // Filter by hr_email
+      }
+    
+      console.log("Final query:", query);
+    
+      try {
+        // Query the jobs collection based on the filters
+        const cursor = jobsCollection.find(query).sort(sortQuery);
+        const result = await cursor.toArray();
+    
+        // Send the filtered jobs as the response
+        res.send(result);
+      } catch (err) {
+        console.error(err);
+        res.status(500).send({ message: "Error fetching jobs" });
+      }
     });
+    
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
