@@ -32,4 +32,4 @@ This is the backend for the Job Portal application. It allows users to browse, f
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/yourusername/job-portal-server.git
+   git clone https://github.com/saidee-hasan/job-portal-server.git
