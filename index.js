@@ -9,7 +9,7 @@ const cookieParser = require('cookie-parser');
 
 app.use(cookieParser())
 app.use(cors( {
-  origin: ['http://localhost:5173','https://rooms-booking.netlify.app'],
+  origin: ['http://localhost:5173','https://jobs-hunters1.netlify.app'],
   credentials: true // Allow credentials (cookies, authorization headers, etc.)
 }));
 require("dotenv").config();
@@ -79,7 +79,7 @@ async function run() {
 
     app.get("/jobs", async (req, res) => {
       const email = req.query.email;
-      let query = {};
+      let query = {}; // Default query (empty object means no filters applied)
       const { sort } = req.query;
       const { search } = req.query;
       const min = req.query?.min;
@@ -132,7 +132,7 @@ async function run() {
       console.log("Final query:", query);
     
       try {
-        // Query the jobs collection based on the filters
+        // Query the jobs collection based on the filters (or no filters if empty)
         const cursor = jobsCollection.find(query).sort(sortQuery);
         const result = await cursor.toArray();
     
@@ -143,6 +143,7 @@ async function run() {
         res.status(500).send({ message: "Error fetching jobs" });
       }
     });
+    
     
     app.get("/jobs/:id", async (req, res) => {
       const id = req.params.id;
